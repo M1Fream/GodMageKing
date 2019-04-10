@@ -9,6 +9,7 @@ class Unit:
     SOUTH=2
     EAST=3
     WEST=4
+    #Add inventory system
     def __init__(self, team, sprite, code, id_num, pos, atr):
         self.commands = []
         self.atr = atr #dict of atributes
@@ -120,6 +121,79 @@ def get_command_loop(next_commands, cur_command, past_commands):
             cur_command[0]=""
         else:
             cur_command[0]=next_commands.pop(0)
+
+#!NOTE! Completely untested, may have bugs    
+class Grid:
+    def __init__(self, tiles):
+        self.tiles = tiles
+        self.size_x = len(tiles)
+        self.size_y = len(tiles[0])
+        
+    def get_tile(self, pos):
+        if pos[0] < 0 or pos[0] >= size_x:
+            return None
+        if pos[1] < 0 or pos[1] >= size_y:
+            return None
+        return tiles[pos[0]][pos[1]]
+
+    def tick(self):
+        updater = {}
+        for i in tiles:
+            for tile in i:
+                tile_update = tile.water_relevel(self)
+                for val in tile_update:
+                    if val in updater:
+                        updater[val] = updater[val] + tile_update[val]
+                    else:
+                        updater[val] = tile_update[val]
+                tile.updating_flag = False
+        for tile in updater:
+            if abs(updater[tile]) > tile.update_threshold:
+                tile.water_height += updater[tile]
+                tile.updating_flag = True
+                for i in tile.adjacents(self):
+                    tile.updating_flag = True
+                
+#!NOTE! Completely untested, may have bugs    
+class Tile:
+    #Add inventory system
+    def __init__(self, land_height, water_height, max_minerals, pos, updating_flag = True):
+        self.land_height = land_height
+        self.water_height = water_height
+        self.max_minerals = max_minerals
+        self.updating_flag = updating_flag #Keeps track of whether the water on the tile needs to be updated
+        self.x = pos[0]
+        self.y = pos[1]
+        self.update_threshold = 0.01 #The value for which changes less than this aren't considered worth updating for
+
+    def adjacents(self, tiles):
+        adjacents = []
+        if get_tile([pos[0]-1, pos[1]]):
+            adjacents.append(tiles.get_tile([pos[0]-1, pos[1]]))
+        elif get_tile([pos[0]+1, pos[1]]):
+            adjacents.append(tiles.get_tile([pos[0]+1, pos[1]]))
+        elif get_tile([pos[0], pos[1]-1]):
+            adjacents.append(tiles.get_tile([pos[0], pos[1]-1]))
+        elif get_tile([pos[0], pos[1]+1]):
+            adjacents.append(tiles.get_tile([pos[0], pos[1]+1]))
+        return adjacents
+    
+    def water_relevel(self, tiles):
+        #Returns a dictionary containing other tiles mapped to changes in water level
+        #Possibly rework?
+        updates = {}
+        if updating_flag:
+            initial_water_level = self.water_height
+            total = 0
+            size = 0
+            for adj in self.adjacents(tiles):
+                if adj.land_height + adj.water_height < self.land_height + self.water_height:
+                    total += -adj.land_height - adj.water_height + self.land_height + self.water_height
+                    size += 1
+            for adj in self.adjacents(tiles):
+                updates[adj] = (-adj.land_height - adj.water_height + self.land_height + self.water_height)*self.water_height*size/(total*10*4)
+            updates[self] = -self.water_height*size/(10*4)
+        return updates
 
 def main():
     screen = pg.display.set_mode((1600, 900))
