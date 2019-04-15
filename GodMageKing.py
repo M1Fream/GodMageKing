@@ -2,7 +2,9 @@ import pygame as pg
 from threading import Timer,Thread,Event
 import time
 import math
-
+import random
+import scipy.ndimage
+import matplotlib.pyplot as plt
 
 class Unit:
     NORTH=1
@@ -12,7 +14,7 @@ class Unit:
     #Add inventory system
     def __init__(self, team, sprite, code, id_num, pos, atr):
         self.commands = []
-        self.atr = atr #dict of atributes
+        self.atr = atr #dict of attributes
         self.team = team
         self.sprite = sprite
         self.code = code
@@ -124,11 +126,55 @@ def get_command_loop(next_commands, cur_command, past_commands):
 
 #!NOTE! Completely untested, may have bugs    
 class Grid:
-    def __init__(self, tiles):
-        self.tiles = tiles
-        self.size_x = len(tiles)
-        self.size_y = len(tiles[0])
-        
+    def __init__(self, size):
+        self.size_x = size
+        self.size_y = size
+        self.tiles = [[0] * self.size_y for i in range(self.size_x)]
+        #for i in range(self.size_x):
+        #    for j in range(self.size_y):
+        #        self.tiles[i][j] = 0
+        self.world_gen(0, len(self.tiles)-1, 0, len(self.tiles[0])-1)
+        self.tiles = scipy.ndimage.filters.gaussian_filter(self.tiles, 5*math.log(size))
+
+    def world_gen(self, mx, MX, my, MY):
+        #Assuming map is square
+        #Not permanent map generation
+        if(mx == MX or my == MY):
+            self.tiles[mx][my] = random.random() - 0.5
+        else:
+            sx = ((MX-mx)//2) + mx
+            sy = ((MY-my)//2) + my
+            #print("mx : "+str(mx)+"sx : "+str(sx)+"MX : "+str(MX))
+            #print("my : "+str(my)+"sy : "+str(sy)+"MY : "+str(MY))
+            #tl = (random.random()-0.5)*math.log(MX-mx + 1)
+            #tr = (random.random()-0.5)*math.log(MX-mx + 1)
+            #bl = (random.random()-0.5)*math.log(MX-mx + 1)
+            #br = (random.random()-0.5)*math.log(MX-mx + 1)
+            tl = (random.random()-0.5)/math.log(MX-mx + 1)
+            tr = (random.random()-0.5)/math.log(MX-mx + 1)
+            bl = (random.random()-0.5)/math.log(MX-mx + 1)
+            br = (random.random()-0.5)/math.log(MX-mx + 1)
+            #tl = (random.random()-0.5)*(MX-mx + 1)
+            #tr = (random.random()-0.5)*(MX-mx + 1)
+            #bl = (random.random()-0.5)*(MX-mx + 1)
+            #br = (random.random()-0.5)*(MX-mx + 1)
+
+            self.world_gen(mx, sx, my, sy)
+            self.world_gen(sx + 1, MX, my, sy)
+            self.world_gen(mx, sx, sy + 1, MY)
+            self.world_gen(sx + 1, MX, sy + 1, MY)
+            
+            for i in range(mx, sx + 1):
+                for j in range(my, sy + 1):
+                    self.tiles[i][j] += tl
+                for j in range(sy + 1, MY + 1):
+                    self.tiles[i][j] += tr
+            for i in range(sx + 1, MX + 1):
+                for j in range(my, sy + 1):
+                    self.tiles[i][j] += bl
+                for j in range(sy + 1, MY + 1):
+                    self.tiles[i][j] += br
+    
     def get_tile(self, pos):
         if pos[0] < 0 or pos[0] >= size_x:
             return None
@@ -196,6 +242,13 @@ class Tile:
         return updates
 
 def main():
+    g = Grid(2000)
+    #for line in g.tiles:
+    #   print([round(x,2) for x in line])
+    plt.imshow(g.tiles)
+    plt.colorbar()
+    plt.show()
+    1/0
     screen = pg.display.set_mode((1600, 900))
     font = pg.font.Font(None, 32)
     command_font = pg.font.Font(None, 18)
