@@ -125,18 +125,6 @@ def get_command_loop(next_commands, cur_command, past_commands):
         else:
             cur_command[0]=next_commands.pop(0)
 
-#!NOTE! DOES HAVE BUGS (PRECONDITION)
-class Wrapper:
-    def __init__(self, tiles):
-        self.tiles=tiles
-    def __getitem__(self, key):
-        return self.tiles[key[0]][key[1]].land_height
-    def __setitem__(self, key, value):
-        self.tiles[key[0]][key[1]].land_height = value
-    def get_tiles(self):
-        return self.tiles
-
-#!NOTE! Completely untested, may have bugs    
 class Grid:
     def __init__(self, size, num_of_players = 2):
         self.size_x = size
@@ -144,18 +132,8 @@ class Grid:
         self.num_of_players = num_of_players
         self.sea_level = max(random.normalvariate(-18, 5), -30)
         self.tiles = [[Tile(0,0,0,(i,j)) for i in range(self.size_y)] for j in range(self.size_x)]
-        #for i in range(self.size_x):
-        #    for j in range(self.size_y):
-        #        self.tiles[i][j] = 0
-        #self.world_gen(0, len(self.tiles)-1, 0, len(self.tiles[0])-1)
-        #wrap = Wrapper(self.tiles)
-        #self.tiles = scipy.ndimage.filters.gaussian_filter(wrap, 5*math.log(size)).tolist().get_tiles()
-        #print(self.tiles)
+
         self.world_gen()
-        
-        #for i in range(self.size_x):
-        #    for j in range(self.size_y):
-        #        self.tiles[i][j].water_height = 0
 
     def world_gen(self):
         simplices = [(perlin.SimplexNoise(), 3**i) for i in range(1, 4)]
