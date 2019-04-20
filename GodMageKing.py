@@ -5,6 +5,7 @@ import math
 import random
 import scipy.ndimage
 import matplotlib.pyplot as plt
+import perlin
 
 class Unit:
     NORTH=1
@@ -124,56 +125,47 @@ def get_command_loop(next_commands, cur_command, past_commands):
         else:
             cur_command[0]=next_commands.pop(0)
 
+#!NOTE! DOES HAVE BUGS (PRECONDITION)
+class Wrapper:
+    def __init__(self, tiles):
+        self.tiles=tiles
+    def __getitem__(self, key):
+        return self.tiles[key[0]][key[1]].land_height
+    def __setitem__(self, key, value):
+        self.tiles[key[0]][key[1]].land_height = value
+    def get_tiles(self):
+        return self.tiles
+
 #!NOTE! Completely untested, may have bugs    
 class Grid:
-    def __init__(self, size):
+    def __init__(self, size, num_of_players = 2):
         self.size_x = size
         self.size_y = size
-        self.tiles = [[0] * self.size_y for i in range(self.size_x)]
+        self.num_of_players = num_of_players
+        self.sea_level = max(random.normalvariate(-18, 5), -30)
+        self.tiles = [[Tile(0,0,0,(i,j)) for i in range(self.size_y)] for j in range(self.size_x)]
         #for i in range(self.size_x):
         #    for j in range(self.size_y):
         #        self.tiles[i][j] = 0
-        self.world_gen(0, len(self.tiles)-1, 0, len(self.tiles[0])-1)
-        self.tiles = scipy.ndimage.filters.gaussian_filter(self.tiles, 5*math.log(size))
+        #self.world_gen(0, len(self.tiles)-1, 0, len(self.tiles[0])-1)
+        #wrap = Wrapper(self.tiles)
+        #self.tiles = scipy.ndimage.filters.gaussian_filter(wrap, 5*math.log(size)).tolist().get_tiles()
+        #print(self.tiles)
+        self.world_gen()
+        
+        #for i in range(self.size_x):
+        #    for j in range(self.size_y):
+        #        self.tiles[i][j].water_height = 0
 
-    def world_gen(self, mx, MX, my, MY):
-        #Assuming map is square
-        #Not permanent map generation
-        if(mx == MX or my == MY):
-            self.tiles[mx][my] = random.random() - 0.5
-        else:
-            sx = ((MX-mx)//2) + mx
-            sy = ((MY-my)//2) + my
-            #print("mx : "+str(mx)+"sx : "+str(sx)+"MX : "+str(MX))
-            #print("my : "+str(my)+"sy : "+str(sy)+"MY : "+str(MY))
-            #tl = (random.random()-0.5)*math.log(MX-mx + 1)
-            #tr = (random.random()-0.5)*math.log(MX-mx + 1)
-            #bl = (random.random()-0.5)*math.log(MX-mx + 1)
-            #br = (random.random()-0.5)*math.log(MX-mx + 1)
-            tl = (random.random()-0.5)/math.log(MX-mx + 1)
-            tr = (random.random()-0.5)/math.log(MX-mx + 1)
-            bl = (random.random()-0.5)/math.log(MX-mx + 1)
-            br = (random.random()-0.5)/math.log(MX-mx + 1)
-            #tl = (random.random()-0.5)*(MX-mx + 1)
-            #tr = (random.random()-0.5)*(MX-mx + 1)
-            #bl = (random.random()-0.5)*(MX-mx + 1)
-            #br = (random.random()-0.5)*(MX-mx + 1)
-
-            self.world_gen(mx, sx, my, sy)
-            self.world_gen(sx + 1, MX, my, sy)
-            self.world_gen(mx, sx, sy + 1, MY)
-            self.world_gen(sx + 1, MX, sy + 1, MY)
-            
-            for i in range(mx, sx + 1):
-                for j in range(my, sy + 1):
-                    self.tiles[i][j] += tl
-                for j in range(sy + 1, MY + 1):
-                    self.tiles[i][j] += tr
-            for i in range(sx + 1, MX + 1):
-                for j in range(my, sy + 1):
-                    self.tiles[i][j] += bl
-                for j in range(sy + 1, MY + 1):
-                    self.tiles[i][j] += br
+    def world_gen(self):
+        simplices = [(perlin.SimplexNoise(), 3**i) for i in range(1, 4)]
+        for i in range(self.size_x):
+            for j in range(self.size_y):
+                self.tiles[i][j].land_height = sum([simp[0].noise2(i/(16*simp[1]), j/(16*simp[1]))*simp[1] for simp in simplices])
+                if self.tiles[i][j].land_height <= self.sea_level:
+                    self.tiles[i][j].water_height = self.sea_level - self.tiles[i][j].land_height
+                else:
+                    self.tiles[i][j].water_height = 0
     
     def get_tile(self, pos):
         if pos[0] < 0 or pos[0] >= size_x:
@@ -242,10 +234,10 @@ class Tile:
         return updates
 
 def main():
-    g = Grid(2000)
+    g = Grid(1000)
     #for line in g.tiles:
     #   print([round(x,2) for x in line])
-    plt.imshow(g.tiles)
+    plt.imshow([[g.tiles[i][j].land_height + g.tiles[i][j].water_height for i in range(g.size_x)] for j in range(g.size_y)])
     plt.colorbar()
     plt.show()
     1/0
