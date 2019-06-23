@@ -4,7 +4,7 @@ import time
 import math
 import random
 import scipy.ndimage
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import perlin
 
 class Unit:
@@ -101,8 +101,9 @@ class Unit:
         cost = spell.cost
 
         self.time_to_cast = math.floor(cost/speed)
-    def render(self):
-        board.blit(self.sprite,(self.x*12+1,self.y*12+1))
+    def render(self, surface, frame):
+        #board.blit(self.sprite,(self.x*12+1,self.y*12+1), area=(frame*11,0,frame*11+10,10))
+        surface.blit(self.sprite,(self.x*12+1,self.y*12+1), area=(frame*11,0,frame*11+10,10))
 
 class Spell:
     SELF=1
@@ -212,13 +213,13 @@ class Tile:
         return updates
 
 def main():
-    g = Grid(1000)
+    g = Grid(100)
     #for line in g.tiles:
     #   print([round(x,2) for x in line])
-    plt.imshow([[g.tiles[i][j].land_height + g.tiles[i][j].water_height for i in range(g.size_x)] for j in range(g.size_y)])
-    plt.colorbar()
-    plt.show()
-    1/0
+    #plt.imshow([[g.tiles[i][j].land_height + g.tiles[i][j].water_height for i in range(g.size_x)] for j in range(g.size_y)])
+    #plt.colorbar()
+    #plt.show()
+    #1/0
     screen = pg.display.set_mode((1600, 900))
     font = pg.font.Font(None, 32)
     command_font = pg.font.Font(None, 18)
@@ -240,6 +241,9 @@ def main():
 
     board = pg.Surface((2000,2000))
 
+    sp = pg.image.load('RedUnit.png')
+    frame = 0
+    testUnit = Unit(1, sp, None, 0, (15,15), dict())
     while not done:
         for event in pg.event.get():
             if event.type == pg.QUIT:
@@ -293,6 +297,11 @@ def main():
         test_surface.fill(pg.Color('Red'))
         screen.blit(test_surface,(121,121))
 
+        testUnit.render(screen, frame)
+        frame+=1
+        if frame>9:
+            frame=0
+        
         for x in range(101):
             pg.draw.line(screen,pg.Color('Black'),(12*x,0),(12*x,900))
         for y in range(100):
